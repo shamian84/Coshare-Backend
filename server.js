@@ -40,9 +40,11 @@ app.use((err, req, res, next) => {
   res.status(500).json({ message: err.message || "Internal Server Error" });
 });
 
-const uploadDir = "./uploads";
+const uploadDir = path.join(process.cwd(), "uploads");
+
 if (!fs.existsSync(uploadDir)) {
-  fs.mkdirSync(uploadDir);
+  fs.mkdirSync(uploadDir, { recursive: true });
+  console.log("📁 Created uploads directory at:", uploadDir);
 }
 
 const PORT = process.env.PORT || 5000;
