@@ -1,14 +1,13 @@
 import ShareLink from "../models/shareLink.js";
 import File from "../models/fileUpload.js";
 import crypto from "crypto";
-import path from "path";
 
 export const generateShareLink = async (req, res) => {
   try {
     const file = await File.findById(req.params.id);
     if (!file) return res.status(404).json({ message: "File not found" });
 
-    if (file.owner.toString() !== req.user) {
+    if (file.owner.toString() !== req.user.toString()) {
       return res.status(403).json({ message: "Not authorized" });
     }
 
@@ -39,7 +38,7 @@ export const accessShareLink = async (req, res) => {
       token: req.params.token,
     }).populate("file");
 
-    if (!link) {
+    if (!link || !link.file) {
       return res
         .status(404)
         .json({ message: "This link is invalid or has expired" });
@@ -66,18 +65,12 @@ export const downloadSharedFile = async (req, res) => {
 
     const file = link.file;
 
-    const filePath = path.resolve(file.path);
+    if (!file.path) {
+      return res.status(404).json({ message: "File path missing" });
+    }
 
-    res.download(filePath, file.originalName, (err) => {
-      if (err) {
-        console.error("Download Error:", err);
-        if (!res.headersSent) {
-          res.status(500).json({ message: "Could not download file" });
-        }
-      }
-    });
+    res.redirect(file.path);
   } catch (error) {
-    console.error("DOWNLOAD ERROR:", error);
     res.status(500).json({ message: "Download failed", error: error.message });
   }
 };

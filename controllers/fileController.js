@@ -1,18 +1,16 @@
 import File from "../models/fileUpload.js";
-import path from "path";
-import fs from "fs";
 
 export const uploadFiles = async (req, res) => {
   try {
     const files = req.files;
-    if (!files || files.length == 0) {
-      return res.status(400).json({ message: "No  File Uploaded" });
+    if (!files || files.length === 0) {
+      return res.status(400).json({ message: "No File Uploaded" });
     }
     const savedFiles = await Promise.all(
       files.map((file) =>
         File.create({
           originalName: file.originalname,
-          filename: file.filename,
+          filename: file.filename || file.public_id,
           size: file.size,
           mimeType: file.mimetype,
           path: file.path,
@@ -33,8 +31,12 @@ export const uploadFiles = async (req, res) => {
 };
 
 export const getMyFiles = async (req, res) => {
-  const files = await File.find({ owner: req.user }).sort({ createdAt: -1 });
-  res.json(files);
+  try {
+    const files = await File.find({ owner: req.user }).sort({ createdAt: -1 });
+    res.json(files);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
 };
 
 export const getSharedFiles = async (req, res) => {
@@ -42,7 +44,6 @@ export const getSharedFiles = async (req, res) => {
     const files = await File.find({
       "sharedWith.user": req.user,
     }).sort({ createdAt: -1 });
-
     res.json(files);
   } catch (error) {
     res.status(500).json({
@@ -59,21 +60,25 @@ export const downloadFile = async (req, res) => {
     if (!file) {
       return res.status(404).json({ message: "File not found" });
     }
-    const userId = req.user;
 
-    if (file.owner.toString() !== userId && !file.sharedWith.includes(userId)) {
+    const userId = req.user.toString();
+
+    const isShared =
+      file.sharedWith &&
+      file.sharedWith.some(
+        (share) => share.user && share.user.toString() === userId
+      );
+
+    if (file.owner.toString() !== userId && !isShared) {
       return res.status(403).json({ message: "Access denied" });
     }
 
-    const filePath = path.resolve(file.path);
-
-    if (!fs.existsSync(filePath)) {
-      return res.status(404).json({ message: "File missing on server" });
+    if (!file.path) {
+      return res.status(404).json({ message: "File link missing" });
     }
 
-    res.download(filePath, file.originalName);
+    res.redirect(file.path);
   } catch (err) {
-    console.error("DOWNLOAD ERROR:", err);
-    res.status(500).json({ message: "Download failed" });
+    res.status(500).json({ message: "Download failed", error: err.message });
   }
 };

@@ -18,8 +18,8 @@ yarn-error.log*
 Thumbs.db
 
 # Uploads (important - don't push user files)
-uploads/
 temp/
+uploads/
 
 # Build output (if any)
 dist/
