@@ -46,6 +46,7 @@ app.use((err, req, res, next) => {
 });
 
 const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => {
+// Use '0.0.0.0' to ensure Render can route traffic to your container
+app.listen(PORT, "0.0.0.0", () => {
   console.log(`Server is Running on Port ${PORT}`);
 });
